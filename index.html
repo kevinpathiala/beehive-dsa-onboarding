@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Beehive — Partner Onboarding</title>
+<!--
+  ============================================================================
+  BEEHIVE REP ONBOARDING — single-page form
+  ============================================================================
+  A rep enters their Etisalat employee name/ID (cached across visits) plus a
+  new customer's details, and submits to HubSpot.
+  - Employee name/ID persists between visits; all customer fields clear each visit.
+  - HubSpot: set portalId + formGuid in HUBSPOT_CONFIG below. Field internal
+    names are in BEEHIVE_FIELD_MAP.
+  ============================================================================
+-->
+<style>
+  :root {
+    --shine-white: #FFFFFF;
+    --sunrise-red: #E00800;
+    --deep-ocean: #0F1430;
+    --emerald: #47CB6C;
+
+    --bg: #FFFFFF;
+    --surface: #FFFFFF;
+    --surface-hover: #F7F6F2;
+    --surface-selected: rgba(224,8,0,0.05);
+    --border: rgba(15,20,48,0.12);
+    --border-strong: rgba(15,20,48,0.22);
+    --border-selected: var(--sunrise-red);
+    --text: var(--deep-ocean);
+    --text-muted: rgba(15,20,48,0.64);
+    --text-faint: rgba(15,20,48,0.44);
+    --accent: var(--sunrise-red);
+    --accent-text: #FFFFFF;
+    --success: var(--emerald);
+
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 22px;
+
+    --font: 'Suisse Intl', 'Suisse Int\'l', "Suisse Int'l", 'Inter Tight', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --ease-onward: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  #beehive-form {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  #beehive-form a { color: var(--accent); }
+  #beehive-form a:hover { color: #b30600; }
+
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 40px 20px 64px;
+  }
+
+  /* Header */
+  .head { margin-bottom: 28px; }
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .eyebrow-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+  h1.title {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 16px;
+    line-height: 1.5;
+    margin: 0;
+    text-wrap: pretty;
+  }
+
+  /* Sections */
+  .section { margin-top: 26px; }
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  .clear-link {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    padding: 4px;
+  }
+  .clear-link:hover { color: var(--accent); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+  }
+  .card.emp {
+    background: linear-gradient(180deg, rgba(224,8,0,0.035), rgba(224,8,0,0) 100%);
+    border-color: rgba(224,8,0,0.20);
+  }
+
+  /* Fields */
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+  .field-label { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+  .field-label .req { color: var(--accent); margin-left: 2px; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  .input, .select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 500;
+    width: 100%;
+    transition: border-color 160ms, background 160ms;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .input::placeholder { color: var(--text-faint); }
+  .input:focus, .select:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: #fff;
+  }
+  .select {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%230F1430' d='M1 1l5 5 5-5'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 40px;
+    cursor: pointer;
+  }
+  .select:has(option[value=""]:checked) { color: var(--text-faint); }
+  .select:disabled { color: var(--text-faint); cursor: not-allowed; background-color: var(--surface-hover); }
+  .input.error, .select.error { border-color: var(--sunrise-red); }
+  .input-error { color: var(--sunrise-red); font-size: 12px; margin-top: 2px; }
+
+  .input-wrap { position: relative; }
+  .input.valid { border-color: rgba(71,203,108,0.55); padding-right: 42px; }
+  .valid-check {
+    position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+    color: var(--success); pointer-events: none;
+    animation: pop 220ms var(--ease-onward);
+  }
+  @keyframes pop { from { opacity: 0; transform: translateY(-50%) scale(0.6); } to { opacity: 1; transform: translateY(-50%) scale(1); } }
+
+  /* DSA banner */
+  .dsa-banner {
+    margin-top: 14px;
+    padding: 12px 16px;
+    background: var(--surface-hover);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+  .dsa-banner strong { color: var(--text); font-weight: 600; }
+
+  /* Daily count chip */
+  .count-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--surface-selected); color: var(--accent);
+    border: 1px solid rgba(224,8,0,0.22);
+    padding: 6px 12px; border-radius: 999px;
+    font-size: 12px; font-weight: 600; letter-spacing: 0.01em;
+    margin-top: 14px;
+  }
+  .count-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+  /* Review summary */
+  .review { animation: fadeUp 260ms var(--ease-onward); }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .review-title { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); margin: 0 0 12px; }
+  .review-list { display: flex; flex-direction: column; gap: 0; }
+  .review-row { display: flex; justify-content: space-between; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+  .review-row:last-child { border-bottom: none; }
+  .review-key { font-size: 13px; color: var(--text-muted); flex-shrink: 0; }
+  .review-val { font-size: 14px; font-weight: 500; text-align: right; word-break: break-word; }
+  .review-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .review-actions .btn { flex: 1; }
+  .btn-ghost {
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 16px 20px; font-family: inherit; font-size: 15px; font-weight: 500;
+    cursor: pointer; transition: border-color 160ms, background 160ms;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-ghost:hover { border-color: var(--border-strong); background: var(--surface-hover); }
+
+  /* Review modal */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(15,20,48,0.55);
+    -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    animation: overlayIn 200ms var(--ease-onward);
+  }
+  @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+  .modal {
+    background: var(--bg);
+    border-radius: var(--radius-lg);
+    width: 100%; max-width: 460px;
+    max-height: 86vh; overflow-y: auto;
+    padding: 26px 24px 24px;
+    box-shadow: 0 24px 70px rgba(15,20,48,0.35);
+    animation: modalIn 280ms var(--ease-onward);
+  }
+  @keyframes modalIn { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: none; } }
+  .modal-title { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 4px; }
+  .modal-sub { font-size: 14px; color: var(--text-muted); margin: 0 0 18px; }
+
+  .money-wrap { position: relative; }
+  .money-prefix {
+    position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+    font-size: 15px; font-weight: 500; color: var(--text-muted); pointer-events: none;
+  }
+  .money-wrap .input { padding-left: 52px; font-variant-numeric: tabular-nums; }
+
+  .phone-row { display: grid; grid-template-columns: 116px 1fr; gap: 10px; }
+
+  /* Submit */
+  .actions { margin-top: 28px; }
+  .btn {
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: 16px 24px;
+    border: none;
+    cursor: pointer;
+    transition: transform 180ms var(--ease-onward), box-shadow 180ms var(--ease-onward), opacity 160ms;
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%;
+  }
+  .btn-primary { background: var(--accent); color: var(--accent-text); }
+  .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(224,8,0,0.28); }
+  .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn svg { transition: transform 260ms var(--ease-onward); }
+  .btn-primary:hover:not(:disabled) svg { transform: translateX(4px); }
+
+  .form-note { font-size: 12px; color: var(--text-faint); text-align: center; margin-top: 14px; }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid currentColor; border-right-color: transparent;
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Confirmation */
+  .confirm { text-align: center; padding: 40px 8px; display: flex; flex-direction: column; align-items: center; }
+  .confirm-badge {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: rgba(71,203,108,0.14); color: var(--success);
+    display: grid; place-items: center; margin: 0 auto 22px;
+  }
+  .confirm h2 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 8px; }
+  .confirm p { color: var(--text-muted); font-size: 16px; line-height: 1.5; margin: 0 auto 26px; max-width: 380px; }
+  .confirm .who { color: var(--text); font-weight: 600; }
+  .btn-secondary {
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 14px 22px; font-family: inherit; font-size: 15px; font-weight: 500;
+    cursor: pointer; transition: border-color 160ms, background 160ms;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-secondary:hover { border-color: var(--border-strong); background: var(--surface-hover); }
+
+  @media (max-width: 480px) {
+    h1.title { font-size: 26px; }
+    .row-2 { grid-template-columns: 1fr; gap: 0; }
+    .wrap { padding: 28px 16px 48px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; transition-duration: 80ms !important; }
+  }
+</style>
+<template id="__bundler_thumbnail">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#FFFFFF"/>
+    <rect x="30" y="30" width="40" height="40" fill="#E00800" rx="8"/>
+    <text x="50" y="59" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="26" fill="#FFFFFF">b</text>
+  </svg>
+</template>
+</head>
+<body>
+  <div id="beehive-form"><div id="root"></div></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef } = React;
+
+const SECTORS = [
+  { value: 'trading', label: 'Trading', sublabel: 'Buy and sell goods', icon: 'shop' },
+  { value: 'services', label: 'Services', sublabel: 'Sell expertise or labour', icon: 'briefcase' },
+  { value: 'manufacturing', label: 'Manufacturing', sublabel: 'Make or produce goods', icon: 'building' },
+];
+
+// Mapping LinkedIn industries to the three Beehive sectors.
+const INDUSTRIES = [
+  // ===== TRADING =====
+  { value: 'APPAREL_FASHION', label: 'Apparel & Fashion', sector: 'trading' },
+  { value: 'AUTOMOTIVE', label: 'Automotive', sector: 'trading' },
+  { value: 'BUILDING_MATERIALS', label: 'Building Materials', sector: 'trading' },
+  { value: 'BUSINESS_SUPPLIES_AND_EQUIPMENT', label: 'Business Supplies and Equipment', sector: 'trading' },
+  { value: 'CONSUMER_ELECTRONICS', label: 'Consumer Electronics', sector: 'trading' },
+  { value: 'CONSUMER_GOODS', label: 'Consumer Goods', sector: 'trading' },
+  { value: 'COSMETICS', label: 'Cosmetics', sector: 'trading' },
+  { value: 'DAIRY', label: 'Dairy', sector: 'trading' },
+  { value: 'FOOD_BEVERAGES', label: 'Food & Beverages', sector: 'trading' },
+  { value: 'FURNITURE', label: 'Furniture', sector: 'trading' },
+  { value: 'IMPORT_AND_EXPORT', label: 'Import and Export', sector: 'trading' },
+  { value: 'LUXURY_GOODS_JEWELRY', label: 'Luxury Goods & Jewelry', sector: 'trading' },
+  { value: 'RETAIL', label: 'Retail', sector: 'trading' },
+  { value: 'SPORTING_GOODS', label: 'Sporting Goods', sector: 'trading' },
+  { value: 'SUPERMARKETS', label: 'Supermarkets', sector: 'trading' },
+  { value: 'TOBACCO', label: 'Tobacco', sector: 'trading' },
+  { value: 'WHOLESALE', label: 'Wholesale', sector: 'trading' },
+  { value: 'WINE_AND_SPIRITS', label: 'Wine and Spirits', sector: 'trading' },
+
+  // ===== SERVICES =====
+  { value: 'ACCOUNTING', label: 'Accounting', sector: 'services' },
+  { value: 'AIRLINES_AVIATION', label: 'Airlines/Aviation', sector: 'services' },
+  { value: 'ALTERNATIVE_DISPUTE_RESOLUTION', label: 'Alternative Dispute Resolution', sector: 'services' },
+  { value: 'ALTERNATIVE_MEDICINE', label: 'Alternative Medicine', sector: 'services' },
+  { value: 'ANIMATION', label: 'Animation', sector: 'services' },
+  { value: 'ARCHITECTURE_PLANNING', label: 'Architecture & Planning', sector: 'services' },
+  { value: 'ARTS_AND_CRAFTS', label: 'Arts and Crafts', sector: 'services' },
+  { value: 'BANKING', label: 'Banking', sector: 'services' },
+  { value: 'BROADCAST_MEDIA', label: 'Broadcast Media', sector: 'services' },
+  { value: 'CAPITAL_MARKETS', label: 'Capital Markets', sector: 'services' },
+  { value: 'CIVIC_SOCIAL_ORGANIZATION', label: 'Civic & Social Organization', sector: 'services' },
+  { value: 'COMMERCIAL_REAL_ESTATE', label: 'Commercial Real Estate', sector: 'services' },
+  { value: 'COMPUTER_NETWORK_SECURITY', label: 'Computer & Network Security', sector: 'services' },
+  { value: 'COMPUTER_NETWORKING', label: 'Computer Networking', sector: 'services' },
+  { value: 'COMPUTER_SOFTWARE', label: 'Computer Software', sector: 'services' },
+  { value: 'INTERNET', label: 'Internet', sector: 'services' },
+  { value: 'CONSUMER_SERVICES', label: 'Consumer Services', sector: 'services' },
+  { value: 'DESIGN', label: 'Design', sector: 'services' },
+  { value: 'EDUCATION_MANAGEMENT', label: 'Education Management', sector: 'services' },
+  { value: 'E_LEARNING', label: 'E-Learning', sector: 'services' },
+  { value: 'ENTERTAINMENT', label: 'Entertainment', sector: 'services' },
+  { value: 'ENVIRONMENTAL_SERVICES', label: 'Environmental Services', sector: 'services' },
+  { value: 'EVENTS_SERVICES', label: 'Events Services', sector: 'services' },
+  { value: 'EXECUTIVE_OFFICE', label: 'Executive Office', sector: 'services' },
+  { value: 'FACILITIES_SERVICES', label: 'Facilities Services', sector: 'services' },
+  { value: 'FINANCIAL_SERVICES', label: 'Financial Services', sector: 'services' },
+  { value: 'FINE_ART', label: 'Fine Art', sector: 'services' },
+  { value: 'FUND_RAISING', label: 'Fund-Raising', sector: 'services' },
+  { value: 'GAMBLING_CASINOS', label: 'Gambling & Casinos', sector: 'services' },
+  { value: 'GOVERNMENT_ADMINISTRATION', label: 'Government Administration', sector: 'services' },
+  { value: 'GOVERNMENT_RELATIONS', label: 'Government Relations', sector: 'services' },
+  { value: 'GRAPHIC_DESIGN', label: 'Graphic Design', sector: 'services' },
+  { value: 'HEALTH_WELLNESS_AND_FITNESS', label: 'Health, Wellness and Fitness', sector: 'services' },
+  { value: 'HIGHER_EDUCATION', label: 'Higher Education', sector: 'services' },
+  { value: 'HOSPITAL_HEALTH_CARE', label: 'Hospital & Health Care', sector: 'services' },
+  { value: 'HOSPITALITY', label: 'Hospitality', sector: 'services' },
+  { value: 'HUMAN_RESOURCES', label: 'Human Resources', sector: 'services' },
+  { value: 'INDIVIDUAL_FAMILY_SERVICES', label: 'Individual & Family Services', sector: 'services' },
+  { value: 'INFORMATION_SERVICES', label: 'Information Services', sector: 'services' },
+  { value: 'INFORMATION_TECHNOLOGY_AND_SERVICES', label: 'Information Technology and Services', sector: 'services' },
+  { value: 'INSURANCE', label: 'Insurance', sector: 'services' },
+  { value: 'INTERNATIONAL_AFFAIRS', label: 'International Affairs', sector: 'services' },
+  { value: 'INTERNATIONAL_TRADE_AND_DEVELOPMENT', label: 'International Trade and Development', sector: 'services' },
+  { value: 'INVESTMENT_BANKING', label: 'Investment Banking', sector: 'services' },
+  { value: 'INVESTMENT_MANAGEMENT', label: 'Investment Management', sector: 'services' },
+  { value: 'JUDICIARY', label: 'Judiciary', sector: 'services' },
+  { value: 'LAW_ENFORCEMENT', label: 'Law Enforcement', sector: 'services' },
+  { value: 'LAW_PRACTICE', label: 'Law Practice', sector: 'services' },
+  { value: 'LEGAL_SERVICES', label: 'Legal Services', sector: 'services' },
+  { value: 'LEGISLATIVE_OFFICE', label: 'Legislative Office', sector: 'services' },
+  { value: 'LEISURE_TRAVEL_TOURISM', label: 'Leisure, Travel & Tourism', sector: 'services' },
+  { value: 'LIBRARIES', label: 'Libraries', sector: 'services' },
+  { value: 'LOGISTICS_AND_SUPPLY_CHAIN', label: 'Logistics and Supply Chain', sector: 'services' },
+  { value: 'MANAGEMENT_CONSULTING', label: 'Management Consulting', sector: 'services' },
+  { value: 'MARITIME', label: 'Maritime', sector: 'services' },
+  { value: 'MARKET_RESEARCH', label: 'Market Research', sector: 'services' },
+  { value: 'MARKETING_AND_ADVERTISING', label: 'Marketing and Advertising', sector: 'services' },
+  { value: 'MEDIA_PRODUCTION', label: 'Media Production', sector: 'services' },
+  { value: 'MEDICAL_PRACTICE', label: 'Medical Practice', sector: 'services' },
+  { value: 'MENTAL_HEALTH_CARE', label: 'Mental Health Care', sector: 'services' },
+  { value: 'MILITARY', label: 'Military', sector: 'services' },
+  { value: 'MOTION_PICTURES_AND_FILM', label: 'Motion Pictures and Film', sector: 'services' },
+  { value: 'MUSEUMS_AND_INSTITUTIONS', label: 'Museums and Institutions', sector: 'services' },
+  { value: 'MUSIC', label: 'Music', sector: 'services' },
+  { value: 'NEWSPAPERS', label: 'Newspapers', sector: 'services' },
+  { value: 'NON_PROFIT_ORGANIZATION_MANAGEMENT', label: 'Non-Profit Organization Management', sector: 'services' },
+  { value: 'ONLINE_MEDIA', label: 'Online Media', sector: 'services' },
+  { value: 'OUTSOURCING_OFFSHORING', label: 'Outsourcing/Offshoring', sector: 'services' },
+  { value: 'PACKAGE_FREIGHT_DELIVERY', label: 'Package/Freight Delivery', sector: 'services' },
+  { value: 'PERFORMING_ARTS', label: 'Performing Arts', sector: 'services' },
+  { value: 'PHILANTHROPY', label: 'Philanthropy', sector: 'services' },
+  { value: 'PHOTOGRAPHY', label: 'Photography', sector: 'services' },
+  { value: 'POLITICAL_ORGANIZATION', label: 'Political Organization', sector: 'services' },
+  { value: 'PRIMARY_SECONDARY_EDUCATION', label: 'Primary/Secondary Education', sector: 'services' },
+  { value: 'PROFESSIONAL_TRAINING_COACHING', label: 'Professional Training & Coaching', sector: 'services' },
+  { value: 'PROGRAM_DEVELOPMENT', label: 'Program Development', sector: 'services' },
+  { value: 'PUBLIC_POLICY', label: 'Public Policy', sector: 'services' },
+  { value: 'PUBLIC_RELATIONS_AND_COMMUNICATIONS', label: 'Public Relations and Communications', sector: 'services' },
+  { value: 'PUBLIC_SAFETY', label: 'Public Safety', sector: 'services' },
+  { value: 'PUBLISHING', label: 'Publishing', sector: 'services' },
+  { value: 'REAL_ESTATE', label: 'Real Estate', sector: 'services' },
+  { value: 'RECREATIONAL_FACILITIES_AND_SERVICES', label: 'Recreational Facilities and Services', sector: 'services' },
+  { value: 'RELIGIOUS_INSTITUTIONS', label: 'Religious Institutions', sector: 'services' },
+  { value: 'RESEARCH', label: 'Research', sector: 'services' },
+  { value: 'RESTAURANTS', label: 'Restaurants', sector: 'services' },
+  { value: 'SECURITY_AND_INVESTIGATIONS', label: 'Security and Investigations', sector: 'services' },
+  { value: 'SPORTS', label: 'Sports', sector: 'services' },
+  { value: 'STAFFING_AND_RECRUITING', label: 'Staffing and Recruiting', sector: 'services' },
+  { value: 'TELECOMMUNICATIONS', label: 'Telecommunications', sector: 'services' },
+  { value: 'THINK_TANKS', label: 'Think Tanks', sector: 'services' },
+  { value: 'TRANSLATION_AND_LOCALIZATION', label: 'Translation and Localization', sector: 'services' },
+  { value: 'TRANSPORTATION_TRUCKING_RAILROAD', label: 'Transportation/Trucking/Railroad', sector: 'services' },
+  { value: 'UTILITIES', label: 'Utilities', sector: 'services' },
+  { value: 'VENTURE_CAPITAL_PRIVATE_EQUITY', label: 'Venture Capital & Private Equity', sector: 'services' },
+  { value: 'VETERINARY', label: 'Veterinary', sector: 'services' },
+  { value: 'WAREHOUSING', label: 'Warehousing', sector: 'services' },
+  { value: 'WIRELESS', label: 'Wireless', sector: 'services' },
+  { value: 'WRITING_AND_EDITING', label: 'Writing and Editing', sector: 'services' },
+  { value: 'COMPUTER_GAMES', label: 'Computer Games', sector: 'services' },
+  { value: 'MOBILE_GAMES', label: 'Mobile Games', sector: 'services' },
+
+  // ===== MANUFACTURING =====
+  { value: 'AVIATION_AEROSPACE', label: 'Aviation & Aerospace', sector: 'manufacturing' },
+  { value: 'BIOTECHNOLOGY', label: 'Biotechnology', sector: 'manufacturing' },
+  { value: 'CHEMICALS', label: 'Chemicals', sector: 'manufacturing' },
+  { value: 'CIVIL_ENGINEERING', label: 'Civil Engineering', sector: 'manufacturing' },
+  { value: 'COMPUTER_HARDWARE', label: 'Computer Hardware', sector: 'manufacturing' },
+  { value: 'CONSTRUCTION', label: 'Construction', sector: 'manufacturing' },
+  { value: 'DEFENSE_SPACE', label: 'Defense & Space', sector: 'manufacturing' },
+  { value: 'ELECTRICAL_ELECTRONIC_MANUFACTURING', label: 'Electrical/Electronic Manufacturing', sector: 'manufacturing' },
+  { value: 'FARMING', label: 'Farming', sector: 'manufacturing' },
+  { value: 'FISHERY', label: 'Fishery', sector: 'manufacturing' },
+  { value: 'FOOD_PRODUCTION', label: 'Food Production', sector: 'manufacturing' },
+  { value: 'GLASS_CERAMICS_CONCRETE', label: 'Glass, Ceramics & Concrete', sector: 'manufacturing' },
+  { value: 'INDUSTRIAL_AUTOMATION', label: 'Industrial Automation', sector: 'manufacturing' },
+  { value: 'MACHINERY', label: 'Machinery', sector: 'manufacturing' },
+  { value: 'MECHANICAL_OR_INDUSTRIAL_ENGINEERING', label: 'Mechanical or Industrial Engineering', sector: 'manufacturing' },
+  { value: 'MEDICAL_DEVICES', label: 'Medical Devices', sector: 'manufacturing' },
+  { value: 'MINING_METALS', label: 'Mining & Metals', sector: 'manufacturing' },
+  { value: 'NANOTECHNOLOGY', label: 'Nanotechnology', sector: 'manufacturing' },
+  { value: 'OIL_ENERGY', label: 'Oil & Energy', sector: 'manufacturing' },
+  { value: 'PACKAGING_AND_CONTAINERS', label: 'Packaging and Containers', sector: 'manufacturing' },
+  { value: 'PAPER_FOREST_PRODUCTS', label: 'Paper & Forest Products', sector: 'manufacturing' },
+  { value: 'PHARMACEUTICALS', label: 'Pharmaceuticals', sector: 'manufacturing' },
+  { value: 'PLASTICS', label: 'Plastics', sector: 'manufacturing' },
+  { value: 'PRINTING', label: 'Printing', sector: 'manufacturing' },
+  { value: 'RAILROAD_MANUFACTURE', label: 'Railroad Manufacture', sector: 'manufacturing' },
+  { value: 'RANCHING', label: 'Ranching', sector: 'manufacturing' },
+  { value: 'RENEWABLES_ENVIRONMENT', label: 'Renewables & Environment', sector: 'manufacturing' },
+  { value: 'SEMICONDUCTORS', label: 'Semiconductors', sector: 'manufacturing' },
+  { value: 'SHIPBUILDING', label: 'Shipbuilding', sector: 'manufacturing' },
+  { value: 'TEXTILES', label: 'Textiles', sector: 'manufacturing' },
+];
+
+const labelForIndustry = (v) => (INDUSTRIES.find((i) => i.value === v) || {}).label || '';
+const labelForSector = (v) => (SECTORS.find((s) => s.value === v) || {}).label || '';
+
+// ============================================================================
+// HUBSPOT_CONFIG — replace with your portal + form IDs.
+// ============================================================================
+window.HUBSPOT_CONFIG = {
+  portalId: 'YOUR_PORTAL_ID',
+  formGuid: 'YOUR_FORM_GUID',
+};
+// HubSpot property internal names.
+window.BEEHIVE_FIELD_MAP = {
+  etisalatEmployee: 'etisalat_employee_name',
+  dsa: 'dsa_name',
+  email: 'email',
+  phone: 'phone',
+  businessName: 'company',
+  businessAge: 'age_of_business_range',
+  sector: 'product_market_sector',
+  industry: 'industry',
+  revenue: 'monthly_revenue_aed',
+  loanAmount: 'form_funding_amount',
+};
+
+const AGE_LABELS = { '<6': 'Under 6 Months', '6-12': '6 - 12 Months', '1-2': '1 - 2 Years', '2+': '2+ Years' };
+
+// ============================================================================
+// DSA identity — read the ?dsa= slug from the (iframe) URL and prettify it.
+// e.g. ?dsa=kinetic-assurance  ->  "Kinetic Assurance"
+// ============================================================================
+const prettifyDsa = (slug) => (slug || '')
+  .replace(/[-_]+/g, ' ')
+  .trim()
+  .replace(/\s+/g, ' ')
+  .split(' ')
+  .map((w) => w ? w.charAt(0).toUpperCase() + w.slice(1) : w)
+  .join(' ');
+const getDsa = () => {
+  try {
+    const p = new URLSearchParams(window.location.search);
+    return prettifyDsa(p.get('dsa') || '');
+  } catch { return ''; }
+};
+
+// ============================================================================
+// Validation
+// ============================================================================
+const validate = (d) => {
+  const e = {};
+  if (!d.etisalatEmployee || d.etisalatEmployee.trim().length < 2) e.etisalatEmployee = 'Enter your name';
+  if (!d.name || d.name.trim().length < 2) e.name = 'Enter the customer name';
+  if (!d.businessName || d.businessName.trim().length < 2) e.businessName = 'Enter the business name';
+  if (!d.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) e.email = 'Enter a valid email';
+  if (!d.phone || d.phone.replace(/\s/g, '').length < 6) e.phone = 'Enter a valid mobile number';
+  if (!d.businessAge) e.businessAge = 'Select business age';
+  if (!d.sector) e.sector = 'Select a sector';
+  if (!d.industry) e.industry = 'Select an industry';
+  if (!(Number(d.revenue) > 0)) e.revenue = 'Enter annual revenue';
+  if (!(Number(d.loanAmount) > 0)) e.loanAmount = 'Enter funding amount';
+  return e;
+};
+
+// ============================================================================
+// HubSpot submit
+// ============================================================================
+const submitToHubSpot = async (d) => {
+  const cfg = window.HUBSPOT_CONFIG;
+  if (!cfg.portalId || cfg.portalId === 'YOUR_PORTAL_ID') {
+    console.warn('[Beehive] HubSpot not configured. Simulating submit.', d);
+    await new Promise((r) => setTimeout(r, 900));
+    return { ok: true, simulated: true };
+  }
+  const map = window.BEEHIVE_FIELD_MAP;
+  const [firstname, ...rest] = (d.name || '').trim().split(/\s+/);
+  const lastname = rest.join(' ');
+  const fields = [
+    { objectTypeId: '0-1', name: 'firstname', value: firstname || '' },
+    { objectTypeId: '0-1', name: 'lastname', value: lastname || '' },
+    { objectTypeId: '0-1', name: map.etisalatEmployee, value: d.etisalatEmployee.trim() },
+    { objectTypeId: '0-1', name: map.dsa, value: d.dsa || '' },
+    { objectTypeId: '0-1', name: map.email, value: d.email },
+    { objectTypeId: '0-1', name: map.phone, value: `${d.phoneCode}${d.phone.replace(/\s/g, '')}` },
+    { objectTypeId: '0-1', name: map.businessName, value: d.businessName },
+    { objectTypeId: '0-1', name: map.businessAge, value: AGE_LABELS[d.businessAge] || '' },
+    { objectTypeId: '0-1', name: map.sector, value: labelForSector(d.sector) },
+    { objectTypeId: '0-1', name: map.industry, value: labelForIndustry(d.industry) },
+    { objectTypeId: '0-1', name: map.revenue, value: String(d.revenue) },
+    { objectTypeId: '0-1', name: map.loanAmount, value: String(d.loanAmount) },
+    // Company object — HubSpot forms often require a Company name (0-2/name)
+    { objectTypeId: '0-2', name: 'name', value: d.businessName },
+  ];
+  const url = `https://api.hsforms.com/submissions/v3/integration/submit/${cfg.portalId}/${cfg.formGuid}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields, context: { pageUri: window.location.href, pageName: document.title } }),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    console.error('[Beehive] HubSpot rejected the submission:', res.status, detail);
+  } else {
+    console.info('[Beehive] HubSpot submission accepted.');
+  }
+  return { ok: res.ok };
+};
+
+// ============================================================================
+// Persistence — ONLY the employee name/ID is cached across visits.
+// ============================================================================
+const EMP_KEY = 'beehive_rep_emp_v1';
+const loadEmp = () => { try { return localStorage.getItem(EMP_KEY) || ''; } catch { return ''; } };
+const saveEmp = (v) => { try { localStorage.setItem(EMP_KEY, v); } catch {} };
+
+// Daily submission counter (per browser, resets each day).
+const COUNT_KEY = 'beehive_rep_count_v1';
+const todayStr = () => new Date().toISOString().slice(0, 10);
+const loadCount = () => { try { const o = JSON.parse(localStorage.getItem(COUNT_KEY) || '{}'); return o.date === todayStr() ? (o.n || 0) : 0; } catch { return 0; } };
+const bumpCount = () => { const n = loadCount() + 1; try { localStorage.setItem(COUNT_KEY, JSON.stringify({ date: todayStr(), n })); } catch {} return n; };
+
+const CUSTOMER_BLANK = {
+  name: '', businessName: '', email: '', phoneCode: '+971', phone: '',
+  businessAge: '', sector: '', industry: '', revenue: '', loanAmount: '',
+};
+
+// ============================================================================
+// Small field components
+// ============================================================================
+const TextField = ({ label, value, onChange, onBlur, placeholder, type = 'text', inputMode, error, required, valid, autoFocus, inputRef }) => (
+  <div className="field">
+    {label && <label className="field-label">{label}{required && <span className="req">*</span>}</label>}
+    <div className={`input-wrap ${valid ? 'is-valid' : ''}`}>
+      <input
+        ref={inputRef}
+        type={type} inputMode={inputMode}
+        className={`input ${error ? 'error' : ''} ${valid ? 'valid' : ''}`}
+        value={value} onChange={(e) => onChange(e.target.value)} onBlur={onBlur}
+        placeholder={placeholder} autoFocus={autoFocus}
+      />
+      {valid && (
+        <svg className="valid-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"><path d="M5 13l4 4L19 7"/></svg>
+      )}
+    </div>
+    {error && <div className="input-error">{error}</div>}
+  </div>
+);
+
+const MoneyField = ({ label, value, onChange, error, required }) => {
+  const display = value === '' ? '' : Number(value).toLocaleString('en-US');
+  return (
+    <div className="field">
+      {label && <label className="field-label">{label}{required && <span className="req">*</span>}</label>}
+      <div className="money-wrap">
+        <span className="money-prefix">AED</span>
+        <input
+          type="text" inputMode="numeric"
+          className={`input ${error ? 'error' : ''}`}
+          value={display}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/[^0-9]/g, '');
+            onChange(digits === '' ? '' : Number(digits));
+          }}
+          placeholder="0"
+        />
+      </div>
+      {error && <div className="input-error">{error}</div>}
+    </div>
+  );
+};
+
+const SelectField = ({ label, value, onChange, children, error, required, disabled }) => (
+  <div className="field">
+    {label && <label className="field-label">{label}{required && <span className="req">*</span>}</label>}
+    <select
+      className={`select ${error ? 'error' : ''}`}
+      value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}
+    >
+      {children}
+    </select>
+    {error && <div className="input-error">{error}</div>}
+  </div>
+);
+
+// ============================================================================
+// App
+// ============================================================================
+const CODE_OPTIONS = [
+  { value: '+971', label: '🇦🇪 +971' },
+  { value: '+968', label: '🇴🇲 +968' },
+  { value: '+966', label: '+966' },
+  { value: '+965', label: '+965' },
+  { value: '+973', label: '+973' },
+  { value: '+974', label: '+974' },
+  { value: '+44', label: '+44' },
+  { value: '+1', label: '+1' },
+];
+
+const emailValid = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v || '');
+const phoneValid = (v) => (v || '').replace(/\s/g, '').length >= 6;
+
+const App = () => {
+  const [emp, setEmp] = useState(loadEmp);
+  const dsa = useMemo(getDsa, []);
+  const [data, setData] = useState({ ...CUSTOMER_BLANK });
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
+  const [done, setDone] = useState(null);
+  const [count, setCount] = useState(loadCount);
+
+  const formRef = useRef(null);
+  const firstCustomerRef = useRef(null);
+
+  useEffect(() => { saveEmp(emp); }, [emp]);
+
+  const set = (patch) => setData((d) => ({ ...d, ...patch }));
+  const markTouched = (k) => setTouched((t) => ({ ...t, [k]: true }));
+
+  const industriesForSector = useMemo(
+    () => INDUSTRIES.filter((i) => i.sector === data.sector),
+    [data.sector]
+  );
+
+  const clearCustomer = () => { setData({ ...CUSTOMER_BLANK }); setErrors({}); setTouched({}); firstCustomerRef.current?.focus(); };
+
+  // Enter advances to the next field; on the last field it moves to review.
+  const onKeyDown = (e) => {
+    if (e.key !== 'Enter') return;
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'textarea' || tag === 'button') return;
+    e.preventDefault();
+    const nodes = [...formRef.current.querySelectorAll('input, select')]
+      .filter((el) => !el.disabled && el.offsetParent !== null);
+    const i = nodes.indexOf(e.target);
+    if (i > -1 && i < nodes.length - 1) nodes[i + 1].focus();
+    else goToReview();
+  };
+
+  const goToReview = () => {
+    const all = { ...data, etisalatEmployee: emp, dsa };
+    const v = validate(all);
+    if (Object.keys(v).length) {
+      setErrors(v);
+      setTouched({ etisalatEmployee: true, name: true, businessName: true, email: true, phone: true, businessAge: true, sector: true, industry: true, revenue: true, loanAmount: true });
+      return;
+    }
+    setErrors({});
+    setReviewing(true);
+  };
+
+  const confirmSend = async () => {
+    const all = { ...data, etisalatEmployee: emp, dsa };
+    setSubmitting(true);
+    try {
+      await submitToHubSpot(all);
+    } catch (err) {
+      console.error('[Beehive] submit failed', err);
+    } finally {
+      const n = bumpCount();
+      setCount(n);
+      setSubmitting(false);
+      setReviewing(false);
+      setDone({ customer: data.name, business: data.businessName, n });
+      setData({ ...CUSTOMER_BLANK }); // keep emp, clear customer
+      setTouched({});
+    }
+  };
+
+  const addAnother = () => { setDone(null); setTimeout(() => firstCustomerRef.current?.focus(), 50); };
+
+  if (done) {
+    return (
+      <div className="wrap">
+        <div className="confirm">
+          <div className="confirm-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="30" height="30"><path d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <h2>Customer submitted</h2>
+          <p><span className="who">{done.business || done.customer}</span> has been sent to the Beehive team.</p>
+          <button className="btn btn-primary" style={{ maxWidth: 300 }} onClick={addAnother}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" width="17" height="17"><path d="M12 5v14M5 12h14"/></svg>
+            Add another customer
+          </button>
+          {done.n > 0 && (
+            <div className="count-chip"><span className="dot" />{done.n} {done.n === 1 ? 'customer' : 'customers'} submitted today</div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  const hasCustomerData = Object.keys(CUSTOMER_BLANK).some(
+    (k) => k !== 'phoneCode' && data[k] !== CUSTOMER_BLANK[k]
+  );
+
+  return (
+    <div className="wrap" ref={formRef} onKeyDown={onKeyDown}>
+      <div className="head">
+        <h1 className="title">Onboard a new customer</h1>
+        <p className="subtitle">Add your details once, then submit each customer you onboard.</p>
+        {dsa && <div className="dsa-banner">Submitting on behalf of <strong>{dsa}</strong></div>}
+        {count > 0 && <div className="count-chip"><span className="dot" />{count} {count === 1 ? 'customer' : 'customers'} submitted today</div>}
+      </div>
+
+      <div className="section">
+        <div className="section-head"><span className="section-title">Your details</span></div>
+        <div className="card emp">
+          <TextField
+            label="Your name" required
+            value={emp} onChange={setEmp}
+            placeholder="First and last name"
+            error={errors.etisalatEmployee}
+            autoFocus={!emp}
+          />
+        </div>
+      </div>
+
+      <div className="section">
+        <div className="section-head">
+          <span className="section-title">Customer details</span>
+          {hasCustomerData && <button type="button" className="clear-link" onClick={clearCustomer}>Clear customer details</button>}
+        </div>
+        <div className="card">
+          <div className="row-2">
+            <TextField label="Customer name" required value={data.name} onChange={(v) => set({ name: v })} placeholder="First and last name" error={errors.name} inputRef={firstCustomerRef} autoFocus={!!emp} />
+            <TextField label="Business name" required value={data.businessName} onChange={(v) => set({ businessName: v })} placeholder="Trading or legal name" error={errors.businessName} />
+          </div>
+          <TextField
+            label="Work email" required type="email" inputMode="email"
+            value={data.email} onChange={(v) => set({ email: v })}
+            onBlur={() => markTouched('email')}
+            placeholder="customer@business.com"
+            error={errors.email}
+            valid={touched.email && emailValid(data.email)}
+          />
+
+          <div className="field">
+            <label className="field-label">Mobile number<span className="req">*</span></label>
+            <div className="phone-row">
+              <select className="select" value={data.phoneCode} onChange={(e) => set({ phoneCode: e.target.value })}>
+                {CODE_OPTIONS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+              <div className={`input-wrap ${touched.phone && phoneValid(data.phone) ? 'is-valid' : ''}`}>
+                <input
+                  type="tel" inputMode="tel"
+                  className={`input ${errors.phone ? 'error' : ''} ${touched.phone && phoneValid(data.phone) ? 'valid' : ''}`}
+                  value={data.phone}
+                  onChange={(e) => set({ phone: e.target.value.replace(/[^0-9 ]/g, '') })}
+                  onBlur={() => markTouched('phone')}
+                  placeholder="50 123 4567"
+                />
+                {touched.phone && phoneValid(data.phone) && (
+                  <svg className="valid-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"><path d="M5 13l4 4L19 7"/></svg>
+                )}
+              </div>
+            </div>
+            {errors.phone && <div className="input-error">{errors.phone}</div>}
+          </div>
+
+          <SelectField label="Business age" required value={data.businessAge} onChange={(v) => set({ businessAge: v })} error={errors.businessAge}>
+            <option value="">Select…</option>
+            <option value="<6">Under 6 months</option>
+            <option value="6-12">6 to 12 months</option>
+            <option value="1-2">1 to 2 years</option>
+            <option value="2+">Over 2 years</option>
+          </SelectField>
+
+          <div className="row-2">
+            <SelectField label="Sector" required value={data.sector} onChange={(v) => set({ sector: v, industry: '' })} error={errors.sector}>
+              <option value="">Select…</option>
+              {SECTORS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </SelectField>
+            <SelectField label="Industry" required value={data.industry} onChange={(v) => set({ industry: v })} error={errors.industry} disabled={!data.sector}>
+              <option value="">{data.sector ? 'Select…' : 'Pick a sector first'}</option>
+              {industriesForSector.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}
+            </SelectField>
+          </div>
+
+          <div className="row-2">
+            <MoneyField label="Annual revenue" required value={data.revenue} onChange={(v) => set({ revenue: v })} error={errors.revenue} />
+            <MoneyField label="Funding needed" required value={data.loanAmount} onChange={(v) => set({ loanAmount: v })} error={errors.loanAmount} />
+          </div>
+        </div>
+      </div>
+
+      <div className="actions">
+        <button type="button" className="btn btn-primary" onClick={goToReview}>
+          Review &amp; submit
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="18" height="18"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+
+      {reviewing && (
+        <div className="modal-overlay" onClick={() => !submitting && setReviewing(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Review before sending</h3>
+            <p className="modal-sub">Check the details are correct, then confirm.</p>
+            <div className="review-list">
+              {dsa && <div className="review-row"><span className="review-key">DSA</span><span className="review-val">{dsa}</span></div>}
+              <div className="review-row"><span className="review-key">Your name</span><span className="review-val">{emp}</span></div>
+              <div className="review-row"><span className="review-key">Customer</span><span className="review-val">{data.name}</span></div>
+              <div className="review-row"><span className="review-key">Business</span><span className="review-val">{data.businessName}</span></div>
+              <div className="review-row"><span className="review-key">Email</span><span className="review-val">{data.email}</span></div>
+              <div className="review-row"><span className="review-key">Mobile</span><span className="review-val">{data.phoneCode} {data.phone}</span></div>
+              <div className="review-row"><span className="review-key">Business age</span><span className="review-val">{AGE_LABELS[data.businessAge]}</span></div>
+              <div className="review-row"><span className="review-key">Sector</span><span className="review-val">{labelForSector(data.sector)}</span></div>
+              <div className="review-row"><span className="review-key">Industry</span><span className="review-val">{labelForIndustry(data.industry)}</span></div>
+              <div className="review-row"><span className="review-key">Annual revenue</span><span className="review-val">AED {Number(data.revenue).toLocaleString('en-US')}</span></div>
+              <div className="review-row"><span className="review-key">Funding needed</span><span className="review-val">AED {Number(data.loanAmount).toLocaleString('en-US')}</span></div>
+            </div>
+            <div className="review-actions">
+              <button type="button" className="btn-ghost" onClick={() => setReviewing(false)} disabled={submitting}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+                Edit
+              </button>
+              <button type="button" className="btn btn-primary" onClick={confirmSend} disabled={submitting}>
+                {submitting ? <><span className="spinner" /> Sending…</> : <>Confirm &amp; send<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="18" height="18"><path d="M5 12h14M13 6l6 6-6 6"/></svg></>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Mount the form.
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+// ── Auto-resize: report height to parent (Webflow iframe embed) ──────────────
+(function reportHeight() {
+  let last = 0;
+  const measure = () => {
+    const el = document.getElementById('beehive-form');
+    return el ? Math.ceil(el.getBoundingClientRect().height) : 0;
+  };
+  const send = () => {
+    const h = measure();
+    if (h > 0 && Math.abs(h - last) > 1) { last = h; window.parent.postMessage({ beehiveFormHeight: h }, '*'); }
+  };
+  window.addEventListener('load', send);
+  if (window.ResizeObserver) new ResizeObserver(send).observe(document.getElementById('beehive-form') || document.body);
+  new MutationObserver(send).observe(document.body, { childList: true, subtree: true, attributes: true });
+  window.addEventListener('resize', send);
+  send();
+})();
+  </script>
+</body>
+</html>
