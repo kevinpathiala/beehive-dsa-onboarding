@@ -516,6 +516,18 @@ window.BEEHIVE_FIELD_MAP = {
   industry: 'industry',
   revenue: 'monthly_revenue_aed',
   loanAmount: 'form_funding_amount',
+  loanType: 'loan_type',
+  loanTenor: 'loan_tenor',
+};
+
+// Loan types + the tenor options each one allows.
+const LOAN_TYPES = [
+  { value: 'TF', label: 'Term Finance (TF)' },
+  { value: 'WCF', label: 'Working Capital Finance (WCF)' },
+];
+const TENOR_OPTIONS = {
+  TF: ['12 months', '24 months'],
+  WCF: ['90 days', '120 days'],
 };
 
 const AGE_LABELS = { '<6': 'Under 6 Months', '6-12': '6 - 12 Months', '1-2': '1 - 2 Years', '2+': '2+ Years' };
@@ -553,6 +565,8 @@ const validate = (d) => {
   if (!d.industry) e.industry = 'Select an industry';
   if (!(Number(d.revenue) > 0)) e.revenue = 'Enter annual revenue';
   if (!(Number(d.loanAmount) > 0)) e.loanAmount = 'Enter funding amount';
+  if (!d.loanType) e.loanType = 'Select a loan type';
+  if (!d.loanTenor) e.loanTenor = 'Select a tenor';
   return e;
 };
 
@@ -582,6 +596,8 @@ const submitToHubSpot = async (d) => {
     { objectTypeId: '0-1', name: map.industry, value: labelForIndustry(d.industry) },
     { objectTypeId: '0-1', name: map.revenue, value: String(d.revenue) },
     { objectTypeId: '0-1', name: map.loanAmount, value: String(d.loanAmount) },
+    { objectTypeId: '0-1', name: map.loanType, value: (LOAN_TYPES.find((t) => t.value === d.loanType) || {}).label || '' },
+    { objectTypeId: '0-1', name: map.loanTenor, value: d.loanTenor || '' },
     // Company object — HubSpot forms often require a Company name (0-2/name)
     { objectTypeId: '0-2', name: 'name', value: d.businessName },
   ];
@@ -616,6 +632,7 @@ const bumpCount = () => { const n = loadCount() + 1; try { localStorage.setItem(
 const CUSTOMER_BLANK = {
   name: '', businessName: '', email: '', phoneCode: '+971', phone: '',
   businessAge: '', sector: '', industry: '', revenue: '', loanAmount: '',
+  loanType: '', loanTenor: '',
 };
 
 // ============================================================================
@@ -876,6 +893,17 @@ const App = () => {
             <MoneyField label="Annual revenue" required value={data.revenue} onChange={(v) => set({ revenue: v })} error={errors.revenue} />
             <MoneyField label="Funding needed" required value={data.loanAmount} onChange={(v) => set({ loanAmount: v })} error={errors.loanAmount} />
           </div>
+
+          <div className="row-2">
+            <SelectField label="Type of loan" required value={data.loanType} onChange={(v) => set({ loanType: v, loanTenor: '' })} error={errors.loanType}>
+              <option value="" disabled>Select…</option>
+              {LOAN_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </SelectField>
+            <SelectField label="Length of tenor" required value={data.loanTenor} onChange={(v) => set({ loanTenor: v })} error={errors.loanTenor} disabled={!data.loanType}>
+              <option value="" disabled>{data.loanType ? 'Select…' : 'Pick a loan type first'}</option>
+              {(TENOR_OPTIONS[data.loanType] || []).map((t) => <option key={t} value={t}>{t}</option>)}
+            </SelectField>
+          </div>
         </div>
       </div>
 
@@ -903,6 +931,8 @@ const App = () => {
               <div className="review-row"><span className="review-key">Industry</span><span className="review-val">{labelForIndustry(data.industry)}</span></div>
               <div className="review-row"><span className="review-key">Annual revenue</span><span className="review-val">AED {Number(data.revenue).toLocaleString('en-US')}</span></div>
               <div className="review-row"><span className="review-key">Funding needed</span><span className="review-val">AED {Number(data.loanAmount).toLocaleString('en-US')}</span></div>
+              <div className="review-row"><span className="review-key">Type of loan</span><span className="review-val">{(LOAN_TYPES.find((t) => t.value === data.loanType) || {}).label}</span></div>
+              <div className="review-row"><span className="review-key">Length of tenor</span><span className="review-val">{data.loanTenor}</span></div>
             </div>
             <div className="review-actions">
               <button type="button" className="btn-ghost" onClick={() => setReviewing(false)} disabled={submitting}>
