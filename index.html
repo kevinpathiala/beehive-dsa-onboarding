@@ -536,13 +536,20 @@ const AGE_LABELS = { '<6': 'Under 6 Months', '6-12': '6 - 12 Months', '1-2': '1 
 // DSA identity — read the ?dsa= slug from the (iframe) URL and prettify it.
 // e.g. ?dsa=kinetic-assurance  ->  "Kinetic Assurance"
 // ============================================================================
-const prettifyDsa = (slug) => (slug || '')
+const DSA_OVERRIDES = {
+  'kinetic-assurance-ltd': 'Kinetic Assurance LTD',
+};
+const prettifyDsa = (slug) => {
+  const key = (slug || '').trim().toLowerCase();
+  if (DSA_OVERRIDES[key]) return DSA_OVERRIDES[key];
+  return (slug || '')
   .replace(/[-_]+/g, ' ')
   .trim()
   .replace(/\s+/g, ' ')
   .split(' ')
   .map((w) => w ? w.charAt(0).toUpperCase() + w.slice(1) : w)
   .join(' ');
+};
 const getDsa = () => {
   try {
     const p = new URLSearchParams(window.location.search);
