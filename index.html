@@ -507,7 +507,7 @@ window.HUBSPOT_CONFIG = {
 // HubSpot property internal names.
 window.BEEHIVE_FIELD_MAP = {
   etisalatEmployee: 'dsa_submitter',
-  dsa: 'dsa_name',
+  dsa: 'dsa',
   email: 'email',
   phone: 'phone',
   businessName: 'company',
@@ -516,18 +516,18 @@ window.BEEHIVE_FIELD_MAP = {
   industry: 'industry',
   revenue: 'monthly_revenue_aed',
   loanAmount: 'form_funding_amount',
-  loanType: 'loan_type',
-  loanTenor: 'loan_tenor',
+  loanType: 'product',
+  loanTenor: 'loan_term',
 };
 
 // Loan types + the tenor options each one allows.
 const LOAN_TYPES = [
-  { value: 'TF', label: 'Term Finance (TF)' },
-  { value: 'WCF', label: 'Working Capital Finance (WCF)' },
+  { value: 'Term Finance UAE', label: 'Term Finance (TF)' },
+  { value: 'CF - WCF', label: 'Working Capital Finance (WCF)' },
 ];
 const TENOR_OPTIONS = {
-  TF: ['12 months', '24 months'],
-  WCF: ['90 days', '120 days'],
+  'Term Finance UAE': ['6 Months', '12 Months', '18 Months', '24 Months', '30 Months', '36 Months'],
+  'CF - WCF': ['6 Months', '12 Months', '18 Months', '24 Months', '30 Months', '36 Months'],
 };
 
 const AGE_LABELS = { '<6': 'Under 6 Months', '6-12': '6 - 12 Months', '1-2': '1 - 2 Years', '2+': '2+ Years' };
