@@ -507,6 +507,7 @@ window.HUBSPOT_CONFIG = {
 // HubSpot property internal names.
 window.BEEHIVE_FIELD_MAP = {
   etisalatEmployee: 'dsa_submitter',
+  empEmail: 'dsa_submitter_email',
   dsa: 'dsa',
   email: 'email',
   phone: 'phone',
@@ -563,6 +564,7 @@ const getDsa = () => {
 const validate = (d) => {
   const e = {};
   if (!d.etisalatEmployee || d.etisalatEmployee.trim().length < 2) e.etisalatEmployee = 'Enter your name';
+  if (!d.empEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.empEmail)) e.empEmail = 'Enter a valid email';
   if (!d.name || d.name.trim().length < 2) e.name = 'Enter the customer name';
   if (!d.businessName || d.businessName.trim().length < 2) e.businessName = 'Enter the business name';
   if (!d.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) e.email = 'Enter a valid email';
@@ -629,6 +631,9 @@ const submitToHubSpot = async (d) => {
 const EMP_KEY = 'beehive_rep_emp_v1';
 const loadEmp = () => { try { return localStorage.getItem(EMP_KEY) || ''; } catch { return ''; } };
 const saveEmp = (v) => { try { localStorage.setItem(EMP_KEY, v); } catch {} };
+const EMP_EMAIL_KEY = 'beehive_rep_emp_email_v1';
+const loadEmpEmail = () => { try { return localStorage.getItem(EMP_EMAIL_KEY) || ''; } catch { return ''; } };
+const saveEmpEmail = (v) => { try { localStorage.setItem(EMP_EMAIL_KEY, v); } catch {} };
 
 // Daily submission counter (per browser, resets each day).
 const COUNT_KEY = 'beehive_rep_count_v1';
@@ -719,6 +724,7 @@ const phoneValid = (v) => (v || '').replace(/\s/g, '').length >= 6;
 
 const App = () => {
   const [emp, setEmp] = useState(loadEmp);
+  const [empEmail, setEmpEmail] = useState(loadEmpEmail);
   const dsa = useMemo(getDsa, []);
   const [data, setData] = useState({ ...CUSTOMER_BLANK });
   const [errors, setErrors] = useState({});
@@ -732,6 +738,7 @@ const App = () => {
   const firstCustomerRef = useRef(null);
 
   useEffect(() => { saveEmp(emp); }, [emp]);
+  useEffect(() => { saveEmpEmail(empEmail); }, [empEmail]);
 
   const set = (patch) => setData((d) => ({ ...d, ...patch }));
   const markTouched = (k) => setTouched((t) => ({ ...t, [k]: true }));
@@ -757,7 +764,7 @@ const App = () => {
   };
 
   const goToReview = () => {
-    const all = { ...data, etisalatEmployee: emp, dsa };
+    const all = { ...data, etisalatEmployee: emp, empEmail, dsa };
     const v = validate(all);
     if (Object.keys(v).length) {
       setErrors(v);
@@ -769,7 +776,7 @@ const App = () => {
   };
 
   const confirmSend = async () => {
-    const all = { ...data, etisalatEmployee: emp, dsa };
+    const all = { ...data, etisalatEmployee: emp, empEmail, dsa };
     setSubmitting(true);
     try {
       await submitToHubSpot(all);
@@ -825,13 +832,21 @@ const App = () => {
       <div className="section">
         <div className="section-head"><span className="section-title">Your details</span></div>
         <div className="card emp">
-          <TextField
-            label="Your name" required
-            value={emp} onChange={setEmp}
-            placeholder="First and last name"
-            error={errors.etisalatEmployee}
-            autoFocus={!emp}
-          />
+          <div className="row-2">
+            <TextField
+              label="Your name" required
+              value={emp} onChange={setEmp}
+              placeholder="First and last name"
+              error={errors.etisalatEmployee}
+              autoFocus={!emp}
+            />
+            <TextField
+              label="Your email" required type="email" inputMode="email"
+              value={empEmail} onChange={setEmpEmail}
+              placeholder="you@example.com"
+              error={errors.empEmail}
+            />
+          </div>
         </div>
       </div>
 
@@ -929,6 +944,7 @@ const App = () => {
             <div className="review-list">
               {dsa && <div className="review-row"><span className="review-key">DSA</span><span className="review-val">{dsa}</span></div>}
               <div className="review-row"><span className="review-key">Your name</span><span className="review-val">{emp}</span></div>
+              <div className="review-row"><span className="review-key">Your email</span><span className="review-val">{empEmail}</span></div>
               <div className="review-row"><span className="review-key">Customer</span><span className="review-val">{data.name}</span></div>
               <div className="review-row"><span className="review-key">Business</span><span className="review-val">{data.businessName}</span></div>
               <div className="review-row"><span className="review-key">Email</span><span className="review-val">{data.email}</span></div>
