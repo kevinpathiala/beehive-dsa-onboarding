@@ -607,6 +607,7 @@ const submitToHubSpot = async (d) => {
     { objectTypeId: '0-1', name: map.loanAmount, value: String(d.loanAmount) },
     { objectTypeId: '0-1', name: map.loanType, value: d.loanType || '' },
     { objectTypeId: '0-1', name: map.loanTenor, value: d.loanTenor || '' },
+    { objectTypeId: '0-1', name: 'hs_lead_source', value: 'Beehive DSA Onboarding' },
     // Company object — HubSpot forms often require a Company name (0-2/name)
     { objectTypeId: '0-2', name: 'name', value: d.businessName },
   ];
