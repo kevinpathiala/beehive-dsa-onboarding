@@ -278,6 +278,27 @@
 
   .form-note { font-size: 12px; color: var(--text-faint); text-align: center; margin-top: 14px; }
 
+  .combobox { width: 100%; }
+  .combo-trigger { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px 16px; color: var(--text-faint); font-family: inherit; font-size: 15px; font-weight: 500; text-align: left; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: all 200ms; }
+  .combo-trigger:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+  .combo-trigger.has-value { color: var(--text); border-color: var(--border-selected); background: var(--surface-selected); }
+  .combo-trigger.error { border-color: var(--sunrise-red); }
+  .combo-overlay { position: fixed; inset: 0; background: rgba(15,20,48,0.55); backdrop-filter: blur(6px); z-index: 1000; display: flex; align-items: flex-end; justify-content: center; animation: fadeIn 200ms var(--ease-onward); }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .combo-sheet { background: var(--bg); border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.12); border-radius: var(--radius-lg) var(--radius-lg) 0 0; width: 100%; max-width: 560px; max-height: 80vh; display: flex; flex-direction: column; animation: slideUp 320ms var(--ease-onward); }
+  @media (min-width: 600px) { .combo-overlay { align-items: center; } .combo-sheet { border-radius: var(--radius-lg); max-height: 70vh; } }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .combo-search-row { display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--border); color: var(--text-muted); }
+  .combo-search { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-family: inherit; font-size: 15px; font-weight: 500; padding: 4px 0; }
+  .combo-search::placeholder { color: var(--text-faint); }
+  .combo-close { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 6px; border-radius: 8px; display: grid; place-items: center; }
+  .combo-close:hover { background: var(--surface); color: var(--text); }
+  .combo-list { flex: 1; overflow-y: auto; padding: 8px; }
+  .combo-item { width: 100%; background: transparent; border: none; color: var(--text); font-family: inherit; font-size: 15px; font-weight: 500; text-align: left; padding: 14px; border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: background 150ms; }
+  .combo-item:hover { background: var(--surface-hover); }
+  .combo-item.selected { background: var(--surface-selected); color: var(--accent); }
+  .combo-empty { padding: 32px 16px; text-align: center; color: var(--text-faint); font-size: 14px; }
+
   .spinner {
     width: 16px; height: 16px;
     border: 2px solid currentColor; border-right-color: transparent;
@@ -513,7 +534,6 @@ window.BEEHIVE_FIELD_MAP = {
   phone: 'phone',
   businessName: 'company',
   businessAge: 'age_of_business_range',
-  sector: 'product_market_sector',
   industry: 'industry',
   revenue: 'monthly_revenue_aed',
   loanAmount: 'form_funding_amount',
@@ -571,7 +591,6 @@ const validate = (d) => {
   if (!d.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) e.email = 'Enter a valid email';
   if (!d.phone || d.phone.replace(/\s/g, '').length < 6) e.phone = 'Enter a valid mobile number';
   if (!d.businessAge) e.businessAge = 'Select business age';
-  if (!d.sector) e.sector = 'Select a sector';
   if (!d.industry) e.industry = 'Select an industry';
   if (!(Number(d.revenue) > 0)) e.revenue = 'Enter annual revenue';
   if (!(Number(d.loanAmount) > 0)) e.loanAmount = 'Enter funding amount';
@@ -602,7 +621,6 @@ const submitToHubSpot = async (d) => {
     { objectTypeId: '0-1', name: map.phone, value: `${d.phoneCode}${d.phone.replace(/\s/g, '')}` },
     { objectTypeId: '0-1', name: map.businessName, value: d.businessName },
     { objectTypeId: '0-1', name: map.businessAge, value: AGE_LABELS[d.businessAge] || '' },
-    { objectTypeId: '0-1', name: map.sector, value: labelForSector(d.sector) },
     { objectTypeId: '0-1', name: map.industry, value: labelForIndustry(d.industry) },
     { objectTypeId: '0-1', name: map.revenue, value: String(d.revenue) },
     { objectTypeId: '0-1', name: map.loanAmount, value: String(d.loanAmount) },
@@ -646,7 +664,7 @@ const bumpCount = () => { const n = loadCount() + 1; try { localStorage.setItem(
 
 const CUSTOMER_BLANK = {
   name: '', businessName: '', email: '', phoneCode: '+971', phone: '',
-  businessAge: '', sector: '', industry: '', revenue: '', loanAmount: '',
+  businessAge: '', industry: '', revenue: '', loanAmount: '',
   loanType: '', loanTenor: '',
 };
 
@@ -708,6 +726,53 @@ const SelectField = ({ label, value, onChange, children, error, required, disabl
   </div>
 );
 
+const Combobox = ({ value, onChange, options, placeholder = 'Search...', triggerLabel, label, required, error }) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const inputRef = useRef(null);
+  const selected = options.find((o) => o.value === value);
+  useEffect(() => { if (open && inputRef.current) inputRef.current.focus(); }, [open]);
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter((o) => o.label.toLowerCase().includes(q));
+  }, [query, options]);
+  return (
+    <div className="field">
+      {label && <label className="field-label">{label}{required && <span className="req">*</span>}</label>}
+      <div className="combobox">
+        <button type="button" className={`combo-trigger ${error ? 'error' : ''} ${selected ? 'has-value' : ''}`} onClick={() => setOpen(true)}>
+          <span className="combo-trigger-label">{selected ? selected.label : (triggerLabel || 'Choose...')}</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" width="18" height="18"><path d="M6 9l6 6 6-6" /></svg>
+        </button>
+        {open && (
+          <div className="combo-overlay" onClick={() => setOpen(false)}>
+            <div className="combo-sheet" onClick={(e) => e.stopPropagation()}>
+              <div className="combo-search-row">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" width="18" height="18"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+                <input ref={inputRef} type="text" className="combo-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={placeholder} />
+                <button type="button" className="combo-close" onClick={() => setOpen(false)} aria-label="Close">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" width="18" height="18"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                </button>
+              </div>
+              <div className="combo-list">
+                {filtered.length === 0 && <div className="combo-empty">No matches. Try a different keyword.</div>}
+                {filtered.map((o) => (
+                  <button key={o.value} type="button" className={`combo-item ${value === o.value ? 'selected' : ''}`} onClick={() => { onChange(o.value); setOpen(false); setQuery(''); }}>
+                    <span>{o.label}</span>
+                    {value === o.value && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"><path d="M20 6L9 17l-5-5" /></svg>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      {error && <div className="input-error">{error}</div>}
+    </div>
+  );
+};
+
 // ============================================================================
 // App
 // ============================================================================
@@ -746,9 +811,9 @@ const App = () => {
   const set = (patch) => setData((d) => ({ ...d, ...patch }));
   const markTouched = (k) => setTouched((t) => ({ ...t, [k]: true }));
 
-  const industriesForSector = useMemo(
-    () => INDUSTRIES.filter((i) => i.sector === data.sector),
-    [data.sector]
+  const allIndustries = useMemo(
+    () => [...INDUSTRIES].sort((a, b) => a.label.localeCompare(b.label)),
+    []
   );
 
   const clearCustomer = () => { setData({ ...CUSTOMER_BLANK }); setErrors({}); setTouched({}); firstCustomerRef.current?.focus(); };
@@ -903,16 +968,15 @@ const App = () => {
             <option value="2+">Over 2 years</option>
           </SelectField>
 
-          <div className="row-2">
-            <SelectField label="Sector" required value={data.sector} onChange={(v) => set({ sector: v, industry: '' })} error={errors.sector}>
-              <option value="">Select…</option>
-              {SECTORS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </SelectField>
-            <SelectField label="Industry" required value={data.industry} onChange={(v) => set({ industry: v })} error={errors.industry} disabled={!data.sector}>
-              <option value="">{data.sector ? 'Select…' : 'Pick a sector first'}</option>
-              {industriesForSector.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}
-            </SelectField>
-          </div>
+          <Combobox
+            label="Industry" required
+            value={data.industry}
+            onChange={(v) => set({ industry: v })}
+            options={allIndustries}
+            placeholder="Search industries..."
+            triggerLabel="Choose your industry"
+            error={errors.industry}
+          />
 
           <div className="row-2">
             <MoneyField label="Annual revenue" required value={data.revenue} onChange={(v) => set({ revenue: v })} error={errors.revenue} />
@@ -953,7 +1017,6 @@ const App = () => {
               <div className="review-row"><span className="review-key">Email</span><span className="review-val">{data.email}</span></div>
               <div className="review-row"><span className="review-key">Mobile</span><span className="review-val">{data.phoneCode} {data.phone}</span></div>
               <div className="review-row"><span className="review-key">Business age</span><span className="review-val">{AGE_LABELS[data.businessAge]}</span></div>
-              <div className="review-row"><span className="review-key">Sector</span><span className="review-val">{labelForSector(data.sector)}</span></div>
               <div className="review-row"><span className="review-key">Industry</span><span className="review-val">{labelForIndustry(data.industry)}</span></div>
               <div className="review-row"><span className="review-key">Annual revenue</span><span className="review-val">AED {Number(data.revenue).toLocaleString('en-US')}</span></div>
               <div className="review-row"><span className="review-key">Funding needed</span><span className="review-val">AED {Number(data.loanAmount).toLocaleString('en-US')}</span></div>
